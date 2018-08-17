@@ -169,6 +169,7 @@ public class MLTools : EditorWindow
         p.StartInfo.RedirectStandardOutput = true;
         p.Exited += new System.EventHandler(handleExit);
         p.EnableRaisingEvents = true;
+
         p.OutputDataReceived += new System.Diagnostics.DataReceivedEventHandler(
            (s, e) =>
            {
@@ -428,9 +429,10 @@ public class MLTools : EditorWindow
                 ll += " -t 1000";
                 break;
             case 2:
-                ll += " -t 100000";
+                ll += " -t 10000";
                 break;
             case 3:
+                ll += " -t 100000";
                 break;
         }
         switch (logOptionIndex)
@@ -463,6 +465,7 @@ public class MLTools : EditorWindow
 
         // save log to file in build folder
         File.WriteAllText(Application.dataPath + "/../Logs/log_" + currentLogCount + ".txt", log);
+        log = "";
     }
 
     // stops the currently running process if it hangs for too long
