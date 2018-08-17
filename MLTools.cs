@@ -1,8 +1,9 @@
 ﻿using UnityEditor;
 using UnityEngine;
 using System.IO;
+using System.Linq;
 
-// This class extends the Unity Editor to automate a lot of the parts of the Magic Leap build process, along with providing useful ways to test and debug in-editor
+// This class extends the Unity Editor to automate a lot of the parts of the Magic Leap build process, along with providing useful ways to test and debug in-editor. 
 // Created by George Hito.
 public class MLTools : EditorWindow
 {
@@ -43,7 +44,7 @@ public class MLTools : EditorWindow
     bool isFile = false;
 
     // build settings
-    static BuildPlayerOptions bpo;
+    bool devBuild = false;
 
     // set button and labels layout
     GUILayoutOption[] buttons = { GUILayout.Width(300), GUILayout.ExpandWidth(true), GUILayout.MinWidth(100) };
@@ -61,10 +62,6 @@ public class MLTools : EditorWindow
     {
         //Show existing window instance. If one doesn't exist, make one.
         GetWindow(typeof(MLTools), false, "ML Tools", true);
-
-        // set build settings
-        bpo = new BuildPlayerOptions();
-
     }
 
     // refresh checks whenever inspector updates
@@ -72,10 +69,10 @@ public class MLTools : EditorWindow
     {
         if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.Lumin)
         {
-            if (EditorUserBuildSettings.GetPlatformSettings("Lumin", "Lumin SDK Location") != "<No SDK Path>")
+            if (EditorUserBuildSettings.GetPlatformSettings("Lumin", "SDKPath") != "")
             {
                 isSDKSet = true;
-                sdkPath = EditorUserBuildSettings.GetPlatformSettings("Lumin", "Lumin SDK Location");
+                sdkPath = EditorUserBuildSettings.GetPlatformSettings("Lumin", "SDKPath");
                 if (PlayerSettings.Lumin.CertificatePath != "")
                 {
                     isLicenseSet = true;
@@ -271,15 +268,26 @@ public class MLTools : EditorWindow
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label("Package Name", labels);
             packageName = GUILayout.TextField(packageName, 50);
+            devBuild = EditorGUILayout.Toggle("Development Build?", devBuild);
             EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Build Project", buttons))
             {
                 // use Unity's build system and build a package to the Build folder
                 // note that we use the default active scenes in build settings, can be changed by user manually
+                // first get active scenes, then setup build pipeline, then build player to /Build/ directory
+                EditorUserBuildSettings.SetPlatformSettings("Lumin", "SignMabuPackage", "true");
+                BuildPlayerOptions bpo = new BuildPlayerOptions();
+                bpo.scenes = (from scene in EditorBuildSettings.scenes where scene.enabled select scene.path).ToArray();
+                bpo.locationPathName = Application.dataPath + "/../Build/" + packageName + ".mpk";
+                bpo.target = BuildTarget.Lumin;
+                if (devBuild)
+                    bpo.options = BuildOptions.Development;
+                else
+                    bpo.options = BuildOptions.None;
 
-                Debug.Log(UnityEngine.SceneManagement.SceneManager.GetActiveScene().ToString());
-                //BuildPipeline.BuildPlayer
+                BuildPipeline.BuildPlayer(bpo);
             }
 
             if (GUILayout.Button("Install to Device", buttons))
@@ -358,7 +366,7 @@ public class MLTools : EditorWindow
             {
                 if (GUILayout.Button("Send File to Device", buttons))
                 {
-                    ExecuteMLDBCommand("push", "-p " + PlayerSettings.applicationIdentifier + " -v " + fileToUploadPath + " /documents/C1/" + fileToUploadName);
+                    ExecuteMLDBCommand("push", "-p " + PlayerSettings.applicationIdentifier + " -v " + fileToUploadPath + " /documents/C2/" + fileToUploadName);
                 }
             }
             else
@@ -368,12 +376,12 @@ public class MLTools : EditorWindow
                     ExecuteMLDBCommand("push", "-p " + PlayerSettings.applicationIdentifier + " -v " + fileToUploadPath + " /documents/C2/" + fileToUploadName);
                 }
             }
-            if (GUILayout.Button("List Files", buttons))
-            {
-                ExecuteMLDBCommand("ls", "-p " + PlayerSettings.applicationIdentifier + " -l /documents/C2/");
-            }
-            EditorGUILayout.EndHorizontal();
         }
+        if (GUILayout.Button("List Files", buttons))
+        {
+            ExecuteMLDBCommand("ls", "-p " + PlayerSettings.applicationIdentifier + " -l /documents/C2/");
+        }
+        EditorGUILayout.EndHorizontal();
     }
 
     // setup terminal display
