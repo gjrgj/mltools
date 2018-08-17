@@ -56,7 +56,7 @@ public class MLTools : EditorWindow
     bool hasExited = true;
 
 
-    // Add menu item named "My Window" to the Window menu
+    // add MLTools under Magic Leap in the top menu
     [MenuItem("Magic Leap/Build Tools")]
     public static void ShowWindow()
     {
@@ -304,7 +304,7 @@ public class MLTools : EditorWindow
         }
     }
 
-    // start/stop applications remotely
+    // start/stop applications remotely and dump device logs/bugreport
     void deviceControl()
     {
         GUILayout.Label("Device Control", EditorStyles.boldLabel);
