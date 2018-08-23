@@ -22,6 +22,6 @@ Import the script into an `Editor` folder in your project to use it. It will app
 * Packages are automatically signed by default.
 * `Application.persistentDataPath` in Unity returns the `%packagename%/documents/C2/` folder on device. Files are automatically uploaded into this folder, and `List Files` returns its contents.
 * I've put in a few checks to squash most potential avenues of bugs, but I'm sure I forgot a few. If you manage to break the interface please let me know and I'll patch that issue.
-* If they don't yet exist, a `Build` and `Logs` folder are generated in the root of your project. Builds and device logs are saved there respectively.
+* If they don't yet exist, a `Build`, `DeviceFiles`, and `Logs` folder are generated in the root of your project. Builds, downloaded device files, and device logs are saved there respectively.
 * Scenes added to the build are taken from the current selected scenes in Unity's Build Settings.
 

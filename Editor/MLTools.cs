@@ -22,6 +22,9 @@ public class MLTools : EditorWindow
     string packageName = "";
     string appPath = "";
 
+    // device control
+    bool byForce = false;
+
     // console window
     Object source;
     Vector2 scroll;
@@ -104,14 +107,18 @@ public class MLTools : EditorWindow
             supportsLumin = true;
         }
         // generate build and logs directory if they don't exist, then check number of logs present so we can add new ones without overwriting
-        if (!Directory.Exists(Application.dataPath + "/../Build/")){
+        if (!Directory.Exists(Application.dataPath + "/../Build/"))
+        {
             Directory.CreateDirectory(Application.dataPath + "/../Build/");
         }
         if (!Directory.Exists(Application.dataPath + "/../Logs/"))
         {
             Directory.CreateDirectory(Application.dataPath + "/../Logs/");
         }
-       
+        if (!Directory.Exists(Application.dataPath + "/../DeviceFiles/"))
+        {
+            Directory.CreateDirectory(Application.dataPath + "/../DeviceFiles/");
+        }
         // set app datapath
         appPath = Application.dataPath;
     }
@@ -131,7 +138,7 @@ public class MLTools : EditorWindow
                 setupTerminalWindow();
             }
             // however, supply a force quit button to kill the process in case it hangs for too long
-            if (hasExited == false && p != null)
+            if (p != null)
             {
                 p.Refresh();
                 if ((System.DateTime.Now - p.StartTime).Seconds > 5)
@@ -156,6 +163,7 @@ public class MLTools : EditorWindow
         if (command == "log")
         {
             terminalOutput = "";
+            log = "";
             if (args == "")
             {
                 args = "-d -t 100";
@@ -197,7 +205,7 @@ public class MLTools : EditorWindow
                }
            }
        );
-        // handle long commands like log and install individually, do not wait for exit here (thus not blocking the main threa
+       
         terminalOutput += "mldb " + command + " " + args + "\n";
         p.Start();
 
@@ -210,10 +218,13 @@ public class MLTools : EditorWindow
         // if we are logging, print location of log
         if (p.StartInfo.Arguments.Split(' ')[0] == "log")
         {
-            terminalOutput += "Log saved to " + appPath + "/../Build/log_" + currentLogCount + ".txt\n";
+            // save log to new file in logs folder 
+            File.WriteAllText(appPath + "/../Logs/log_" + currentLogCount + ".txt", log);
+            terminalOutput += "Log saved to " + appPath + "/../Logs/log_" + currentLogCount + ".txt\n";
         }
         p.Close();
         hasExited = true;
+        p = null;
     }
 
     // use location of ML SDK to find envsetup.bat, everything else depends on this being set first
@@ -294,6 +305,8 @@ public class MLTools : EditorWindow
             if (GUILayout.Button("Install to Device", buttons))
             {
                 // look for .mpk in build directory then send it to device, overwrite existing package
+                // first terminate existing app so MLTools won't hang
+                //ExecuteMLDBCommand("terminate", "-f " + PlayerSettings.applicationIdentifier);
                 ExecuteMLDBCommand("install", "-u " + Application.dataPath + "/../Build/" + packageName + ".mpk");
             }
 
@@ -314,16 +327,19 @@ public class MLTools : EditorWindow
         {
             ExecuteMLDBCommand("launch", "-f " + PlayerSettings.applicationIdentifier);
         }
-        if (GUILayout.Button("Force Quit on Device", buttons))
+        if (GUILayout.Button("Quit on Device", buttons))
         {
-            ExecuteMLDBCommand("terminate", "-f " + PlayerSettings.applicationIdentifier);
+            if (!byForce)
+                ExecuteMLDBCommand("terminate", PlayerSettings.applicationIdentifier);
+            else
+                ExecuteMLDBCommand("terminate", "-f " + PlayerSettings.applicationIdentifier);
         }
+        byForce = EditorGUILayout.Toggle("Force quit?", byForce, GUILayout.MaxWidth(180));
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("Dump Device Log", buttons))
         {
             HandleLog();
-            log = "";
         }
         logLengthIndex = EditorGUILayout.Popup(logLengthIndex, logLength);
         logOptionIndex = EditorGUILayout.Popup(logOptionIndex, logOptions);
@@ -381,6 +397,11 @@ public class MLTools : EditorWindow
         if (GUILayout.Button("List Files", buttons))
         {
             ExecuteMLDBCommand("ls", "-p " + PlayerSettings.applicationIdentifier + " -l /documents/C2/");
+        }
+        // downlaod files in persistentDataPath from device, stores in folder timestamped with time command was executed
+        if (GUILayout.Button("Download Device Files", buttons))
+        {
+            ExecuteMLDBCommand("pull", "-p " + PlayerSettings.applicationIdentifier + " -a -v /documents/C2/ " + appPath + "/../DeviceFiles/" + System.DateTime.Now.Month.ToString() + "-" + System.DateTime.Now.Day.ToString() + "_" + System.DateTime.Now.Hour.ToString() + "." + System.DateTime.Now.Minute.ToString() + "." + System.DateTime.Now.Second.ToString());
         }
         EditorGUILayout.EndHorizontal();
     }
@@ -462,10 +483,6 @@ public class MLTools : EditorWindow
                 ExecuteMLDBCommand("log", "-d -v raw" + ll);
                 break;
         }
-
-        // save log to file in build folder
-        File.WriteAllText(Application.dataPath + "/../Logs/log_" + currentLogCount + ".txt", log);
-        log = "";
     }
 
     // stops the currently running process if it hangs for too long
