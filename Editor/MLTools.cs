@@ -47,7 +47,7 @@ public class MLTools : EditorWindow
     bool isFile = false;
 
     // build settings
-    bool devBuild = false;
+    bool devBuild = true;
 
     // set button and labels layout
     GUILayoutOption[] buttons = { GUILayout.Width(300), GUILayout.ExpandWidth(true), GUILayout.MinWidth(100) };
@@ -96,6 +96,7 @@ public class MLTools : EditorWindow
         {
             isLumin = false;
         }
+        Repaint();
     }
 
     // on awake, check if a build folder exists, if not then create it
@@ -306,7 +307,6 @@ public class MLTools : EditorWindow
             {
                 // look for .mpk in build directory then send it to device, overwrite existing package
                 // first terminate existing app so MLTools won't hang
-                //ExecuteMLDBCommand("terminate", "-f " + PlayerSettings.applicationIdentifier);
                 ExecuteMLDBCommand("install", "-u " + Application.dataPath + "/../Build/" + packageName + ".mpk");
             }
 
