@@ -336,7 +336,6 @@ public class MLTools : EditorWindow
                 ExecuteMLDBCommand("terminate", PlayerSettings.applicationIdentifier);
             else
                 ExecuteMLDBCommand("terminate", "-f " + PlayerSettings.applicationIdentifier);
-            Debug.Log(Application.unityVersion);
         }
         byForce = EditorGUILayout.Toggle("Force quit?", byForce, GUILayout.MaxWidth(180));
         EditorGUILayout.EndHorizontal();
