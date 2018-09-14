@@ -158,8 +158,7 @@ public class MLTools : EditorWindow
         // display command to user
         hasExited = false;
         p = new System.Diagnostics.Process();
-        p.StartInfo.WorkingDirectory = sdkPath + "/tools/mldb/";
-        p.StartInfo.FileName = "mldb.exe";
+        p.StartInfo.FileName = sdkPath + "/tools/mldb/mldb.exe";
         // make sure user can't initiate an infinite log, and reset output whenever log is called so we can show the whole 100 lines
         if (command == "log")
         {
@@ -294,8 +293,12 @@ public class MLTools : EditorWindow
                 BuildPlayerOptions bpo = new BuildPlayerOptions();
                 bpo.scenes = (from scene in EditorBuildSettings.scenes where scene.enabled select scene.path).ToArray();
                 bpo.locationPathName = Application.dataPath + "/../Build/" + packageName + ".mpk";
+
+                // recent change in ML Unity flipped the functionality of the Development Build and Profilable Executable build options, accounting for it here
                 bpo.target = BuildTarget.Lumin;
-                if (devBuild)
+                if (devBuild && Application.unityVersion == "2018.1.9f1-MLTP8.1")
+                    bpo.options = BuildOptions.AllowDebugging;
+                else if (devBuild && Application.unityVersion == "2018.1.6f1-MLTP7")
                     bpo.options = BuildOptions.Development;
                 else
                     bpo.options = BuildOptions.None;
@@ -333,6 +336,7 @@ public class MLTools : EditorWindow
                 ExecuteMLDBCommand("terminate", PlayerSettings.applicationIdentifier);
             else
                 ExecuteMLDBCommand("terminate", "-f " + PlayerSettings.applicationIdentifier);
+            Debug.Log(Application.unityVersion);
         }
         byForce = EditorGUILayout.Toggle("Force quit?", byForce, GUILayout.MaxWidth(180));
         EditorGUILayout.EndHorizontal();
