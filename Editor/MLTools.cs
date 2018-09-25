@@ -7,6 +7,9 @@ using System.Linq;
 // Created by George Hito.
 public class MLTools : EditorWindow
 {
+    // platform (windows or OSX)
+    bool isOSX = false;
+
     // checks for sdk, license, device, and if editor supports lumin
     bool supportsLumin = false;
     bool isSDKSet = false;
@@ -19,7 +22,7 @@ public class MLTools : EditorWindow
     string sdkPath = "";
     string notification = "";
     string customCommand = "";
-    string packageName = "";
+    string packageName = "Test";
     string appPath = "";
 
     // device control
@@ -30,7 +33,6 @@ public class MLTools : EditorWindow
     Vector2 scroll;
     string terminalOutput = "";
     string log = "";
-    string prevMessage = "";
     int currentLogCount = 0;
 
     // log settings
@@ -99,7 +101,7 @@ public class MLTools : EditorWindow
         Repaint();
     }
 
-    // on awake, check if a build folder exists, if not then create it
+    // Generate relevant folders on awake
     void Awake()
     {
         // first check to see if Lumin is supported in the editor, if not disable window and notify user
@@ -122,6 +124,9 @@ public class MLTools : EditorWindow
         }
         // set app datapath
         appPath = Application.dataPath;
+        // get current platform
+        if (Application.platform.ToString() == "OSXEditor")
+            isOSX = true;
     }
 
     void OnGUI()
@@ -129,22 +134,11 @@ public class MLTools : EditorWindow
         // disable everything if editor doesn't support lumin and notify user
         using (new EditorGUI.DisabledScope(!supportsLumin))
         {
-            // disable controls when a process is running
-            using (new EditorGUI.DisabledScope(!hasExited))
-            {
-                setupEnv();
-                manageBuilds();
-                deviceControl();
-                fileManagement();
-                setupTerminalWindow();
-            }
-            // however, supply a force quit button to kill the process in case it hangs for too long
-            if (p != null)
-            {
-                p.Refresh();
-                if ((System.DateTime.Now - p.StartTime).Seconds > 5)
-                    forceQuit();
-            }
+            setupEnv();
+            manageBuilds();
+            deviceControl();
+            fileManagement();
+            setupTerminalWindow();
         }
         if (!supportsLumin)
         {
@@ -152,13 +146,11 @@ public class MLTools : EditorWindow
         }
     }
 
-    // start process, execute mldb command, return terminal output
+    // start process, execute mldb command, show terminal output to user
     void ExecuteMLDBCommand(string command, string args)
     {
-        // display command to user
         hasExited = false;
         p = new System.Diagnostics.Process();
-        p.StartInfo.FileName = sdkPath + "/tools/mldb/mldb.exe";
         // make sure user can't initiate an infinite log, and reset output whenever log is called so we can show the whole 100 lines
         if (command == "log")
         {
@@ -170,11 +162,17 @@ public class MLTools : EditorWindow
                 terminalOutput += "No support for continuous logging yet. Default log gives 100 lines.";
             }
         }
-        p.StartInfo.Arguments = command + " " + args;
-        p.StartInfo.UseShellExecute = false;
-        p.StartInfo.CreateNoWindow = true;
-        p.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-        p.StartInfo.RedirectStandardOutput = true;
+        if (isOSX)
+            psi.FileName = sdkPath + "/tools/mldb/mldb";    
+        else 
+            psi.FileName = sdkPath + "/tools/mldb/mldb.exe";
+        psi.Arguments = command + " " + args;
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
+        p.StartInfo = psi;
         p.Exited += new System.EventHandler(handleExit);
         p.EnableRaisingEvents = true;
 
@@ -182,7 +180,6 @@ public class MLTools : EditorWindow
            (s, e) =>
            {
                string output = e.Data;
-               prevMessage = output;
                switch (command)
                {
                    case "log":
@@ -204,11 +201,8 @@ public class MLTools : EditorWindow
                    terminalOutput = "";
                }
            }
-       );
-       
-        terminalOutput += "mldb " + command + " " + args + "\n";
+       );   
         p.Start();
-
         p.BeginOutputReadLine();
     }
 
@@ -227,7 +221,7 @@ public class MLTools : EditorWindow
         p = null;
     }
 
-    // use location of ML SDK to find envsetup.bat, everything else depends on this being set first
+    // Check for correct build target, license existence, and ML SDK location.
     void setupEnv()
     {
         // check environment settings, ensure everything is correct
@@ -270,7 +264,7 @@ public class MLTools : EditorWindow
         EditorGUILayout.EndHorizontal();      
     }
 
-    // manage application building to device, checks if a 'Build' directory exists and if not then generates it
+    // manage application building and device install/uninstall
     void manageBuilds()
     {
         // grey out build commands if license not yet set, or sdk not set, or device not detected
@@ -353,7 +347,7 @@ public class MLTools : EditorWindow
         }
     }
 
-    // manages file upload/
+    // manages file upload/download to/from device
     void fileManagement()
     {
         GUILayout.Label("App File Management", EditorStyles.boldLabel);
@@ -401,7 +395,7 @@ public class MLTools : EditorWindow
         {
             ExecuteMLDBCommand("ls", "-p " + PlayerSettings.applicationIdentifier + " -l /documents/C2/");
         }
-        // downlaod files in persistentDataPath from device, stores in folder timestamped with time command was executed
+        // download files in persistentDataPath from device, stores in folder timestamped with time command was executed
         if (GUILayout.Button("Download Device Files", buttons))
         {
             ExecuteMLDBCommand("pull", "-p " + PlayerSettings.applicationIdentifier + " -a -v /documents/C2/ " + appPath + "/../DeviceFiles/" + System.DateTime.Now.Month.ToString() + "-" + System.DateTime.Now.Day.ToString() + "_" + System.DateTime.Now.Hour.ToString() + "." + System.DateTime.Now.Minute.ToString() + "." + System.DateTime.Now.Second.ToString());
