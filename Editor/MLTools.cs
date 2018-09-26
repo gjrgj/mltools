@@ -278,7 +278,7 @@ public class MLTools : EditorWindow
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Build Project", buttons))
+            if (GUILayout.Button(new GUIContent("Build Project", "Builds project and saves " + packageName + ".mpk into the Assets/Build/ directory."), buttons))
             {
                 // use Unity's build system and build a package to the Build folder
                 // note that we use the default active scenes in build settings, can be changed by user manually
@@ -300,14 +300,14 @@ public class MLTools : EditorWindow
                 BuildPipeline.BuildPlayer(bpo);
             }
 
-            if (GUILayout.Button("Install to Device", buttons))
+            if (GUILayout.Button(new GUIContent("Install to Device", "Installs " + packageName + ".mpk to device. On the filesystem, it will be listed as " + PlayerSettings.applicationIdentifier + "."), buttons))
             {
                 // look for .mpk in build directory then send it to device, overwrite existing package
                 // first terminate existing app so MLTools won't hang
                 ExecuteMLDBCommand("install", "-u " + Application.dataPath + "/../Build/" + packageName + ".mpk");
             }
 
-            if (GUILayout.Button("Uninstall from Device", buttons))
+            if (GUILayout.Button(new GUIContent("Uninstall from Device", "Uninstalls " + PlayerSettings.applicationIdentifier + " from device."), buttons))
             {
                 ExecuteMLDBCommand("uninstall", PlayerSettings.applicationIdentifier);
             }
@@ -315,16 +315,18 @@ public class MLTools : EditorWindow
         }
     }
 
-    // start/stop applications remotely and dump device logs/bugreport
+    // st
+
+    // dump device logs/bugreport
     void deviceControl()
     {
         GUILayout.Label("Device Control", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("Launch on Device", buttons))
+        if (GUILayout.Button(new GUIContent("Launch on Device", "Launches " + PlayerSettings.applicationIdentifier + " on device."), buttons))
         {
             ExecuteMLDBCommand("launch", "-f " + PlayerSettings.applicationIdentifier);
         }
-        if (GUILayout.Button("Quit on Device", buttons))
+        if (GUILayout.Button(new GUIContent("Quit on Device", "Quits " + PlayerSettings.applicationIdentifier + " on device."), buttons))
         {
             if (!byForce)
                 ExecuteMLDBCommand("terminate", PlayerSettings.applicationIdentifier);
@@ -334,14 +336,14 @@ public class MLTools : EditorWindow
         byForce = EditorGUILayout.Toggle("Force quit?", byForce, GUILayout.MaxWidth(180));
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("Dump Device Log", buttons))
+        if (GUILayout.Button(new GUIContent("Dump Device Log", "Dumps device log according to user-set parameters into the Assets/Logs/ directory."), buttons))
         {
             HandleLog();
         }
         logLengthIndex = EditorGUILayout.Popup(logLengthIndex, logLength);
         logOptionIndex = EditorGUILayout.Popup(logOptionIndex, logOptions);
         EditorGUILayout.EndHorizontal();
-        if (GUILayout.Button("Generate Bug Report", buttons))
+        if (GUILayout.Button(new GUIContent("Generate Bug Report", "Generates bug report on-device and saves it in the Assets/Logs/ directory. Warning - may take a long time. Do not input other commands during this process."), buttons))
         {
             ExecuteMLDBCommand("bugreport", Application.dataPath + "/../Logs/" + packageName + "_bugreport.zip");
         }
@@ -353,7 +355,7 @@ public class MLTools : EditorWindow
         GUILayout.Label("App File Management", EditorStyles.boldLabel);
         // disable unless file is chosen
         EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("Choose File", buttons))
+        if (GUILayout.Button(new GUIContent("Choose File", "Choose file to upload to package folder on device. It will be saved in the subdirectory /documents/C2/."), buttons))
         {
             isFile = true;
             fileToUploadPath = EditorUtility.OpenFilePanel("Choose file to upload to device", "", "");
@@ -362,7 +364,7 @@ public class MLTools : EditorWindow
             string[] filePath = temp.Split('/');
             fileToUploadName = System.String.Copy(filePath[filePath.Length - 1]);
         }
-        if (GUILayout.Button("Choose Folder", buttons))
+        if (GUILayout.Button(new GUIContent("Choose Folder", "Choose folder to upload to package folder on device. It will be saved in the subdirectory /documents/C2/."), buttons))
         {
             isFile = false;
             fileToUploadPath = EditorUtility.OpenFolderPanel("Choose folder to upload to device", "", "");
@@ -378,25 +380,25 @@ public class MLTools : EditorWindow
             EditorGUILayout.BeginHorizontal();
             if (isFile)
             {
-                if (GUILayout.Button("Send File to Device", buttons))
+                if (GUILayout.Button(new GUIContent("Send File to Device", "Send chosen file to /documents/C2/. It will overwrite existing files with the same name automatically."), buttons))
                 {
                     ExecuteMLDBCommand("push", "-p " + PlayerSettings.applicationIdentifier + " -v " + fileToUploadPath + " /documents/C2/" + fileToUploadName);
                 }
             }
             else
             {
-                if (GUILayout.Button("Send Folder to Device", buttons))
+                if (GUILayout.Button(new GUIContent("Send Folder to Device", "Send chosen folder to /documents/C2/. It will overwrite existing folders with the same name automatically."), buttons))
                 {
                     ExecuteMLDBCommand("push", "-p " + PlayerSettings.applicationIdentifier + " -v " + fileToUploadPath + " /documents/C2/" + fileToUploadName);
                 }
             }
         }
-        if (GUILayout.Button("List Files", buttons))
+        if (GUILayout.Button(new GUIContent("List Package Files", "List files in package persistentDataPath directory, /documents/C2/."), buttons))
         {
             ExecuteMLDBCommand("ls", "-p " + PlayerSettings.applicationIdentifier + " -l /documents/C2/");
         }
         // download files in persistentDataPath from device, stores in folder timestamped with time command was executed
-        if (GUILayout.Button("Download Device Files", buttons))
+        if (GUILayout.Button(new GUIContent("Download Package Files", "Download all files in package persistentDataPath directory, /documents/C2/. Save them to the Assets/DeviceFiles/ directory on disk."), buttons))
         {
             ExecuteMLDBCommand("pull", "-p " + PlayerSettings.applicationIdentifier + " -a -v /documents/C2/ " + appPath + "/../DeviceFiles/" + System.DateTime.Now.Month.ToString() + "-" + System.DateTime.Now.Day.ToString() + "_" + System.DateTime.Now.Hour.ToString() + "." + System.DateTime.Now.Minute.ToString() + "." + System.DateTime.Now.Second.ToString());
         }
@@ -412,19 +414,19 @@ public class MLTools : EditorWindow
         }
         // allow the user to input custom commands
         EditorGUILayout.BeginHorizontal();
-        GUILayout.Label("Send Custom Command", labels);
+        GUILayout.Label(new GUIContent("Send Custom Command", "Send an MLDB command not listed above."), labels);
         if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return)
         {
             ExecuteMLDBCommand(customCommand, "");
         }
         customCommand = GUILayout.TextField(customCommand, 100, GUILayout.ExpandWidth(true), GUILayout.Width(200));
-        if (GUILayout.Button("List Commands", buttons))
+        if (GUILayout.Button(new GUIContent("List Commands", "List all MLDB commands."), buttons))
         {
             terminalOutput = "";
             ExecuteMLDBCommand("help", "");
         }
         EditorGUILayout.EndHorizontal();
-        if (GUILayout.Button("Clear Output", buttons))
+        if (GUILayout.Button(new GUIContent("Clear Output", "Clear terminal output log."), buttons))
         {
             terminalOutput = "";
         }
